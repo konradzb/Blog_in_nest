@@ -1,28 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { FakeBlogRepo } from './fake.blog.repo';
-import { Blog } from './blog.interface';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Blog } from '@prisma/client'; // <-- typ Prisma
+import { CreateBlogDto } from './dto/create-blog.dto';
+import { EditBlogDto } from './dto/edit-blog.dto';
 
 @Injectable()
 export class BlogService {
-    constructor(private readonly blogRepo: FakeBlogRepo) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-    getAllBlogs (): Blog[] {
-        return this.blogRepo.findAll();
-    }
+  async getAllBlogs(): Promise<Blog[]> {
+    return this.prisma.blog.findMany();
+  }
 
-    getBlogById (id: number): Blog {
-        const blog = this.blogRepo.findBlogById(id);
-        console.log(blog);
-        if (!blog) {
-            throw new Error(`Blog with id ${id} not found`);
-        }
-        return blog;
-    }
+  async getBlogById(id: number): Promise<Blog | null>  {
+    const blog = await this.prisma.blog.findUnique({ where: { id } });
+    
+    return blog;
+  }
 
-    createBlog (blog: Blog): void {
-        const tempBlog = blog;
-        //  add validation here
+  async createBlog(dto: CreateBlogDto): Promise<Blog> {
+    return this.prisma.blog.create({ data: dto });
+  }
 
-        return this.blogRepo.createBlog(blog);
-    }
+  async editBlog(id: number, dto: EditBlogDto): Promise<Blog> {
+    const existing = await this.prisma.blog.findUnique({ where: { id } });
+    
+    return this.prisma.blog.update({ where: { id }, data: dto });
+  }
+
+  async deleteBlog(id: number): Promise<Blog> {
+    const existing = await this.prisma.blog.findUnique({ where: { id } });
+    
+    return this.prisma.blog.delete({ where: { id } });
+  }
 }
